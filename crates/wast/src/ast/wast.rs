@@ -45,6 +45,42 @@ impl Peek for WastDirectiveToken {
     }
 }
 
+/// Enumerate the available types that can be checked in `AssertReturn*Nan`.
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
+#[allow(missing_docs)]
+pub enum WastCheckType {
+    F32x4, F64x2
+}
+
+impl Parse<'_> for WastCheckType {
+    fn parse(parser: Parser) -> Result<Self> {
+        let mut l = parser.lookahead1();
+        if l.peek::<kw::f32x4>() {
+            parser.parse::<kw::f32x4>()?;
+            Ok(WastCheckType::F32x4)
+        } else if l.peek::<kw::f64x2>() {
+            parser.parse::<kw::f64x2>()?;
+            Ok(WastCheckType::F64x2)
+        } else {
+            Err(l.error())
+        }
+    }
+}
+
+impl Peek for WastCheckType {
+    fn peek(cursor: Cursor<'_>) -> bool {
+        let kw = match cursor.keyword() {
+            Some((kw, _)) => kw,
+            None => return false,
+        };
+        kw == "f32x4" || kw == "f64x2"
+    }
+
+    fn display() -> &'static str {
+        unimplemented!()
+    }
+}
+
 /// The different kinds of directives found in a `*.wast` file.
 ///
 /// It's not entirely clear to me what all of these are per se, but they're only
@@ -81,10 +117,12 @@ pub enum WastDirective<'a> {
     AssertReturnCanonicalNan {
         span: ast::Span,
         invoke: WastInvoke<'a>,
+        check_type: Option<WastCheckType>
     },
     AssertReturnArithmeticNan {
         span: ast::Span,
         invoke: WastInvoke<'a>,
+        check_type: Option<WastCheckType>
     },
     AssertReturnFunc {
         span: ast::Span,
@@ -154,12 +192,14 @@ impl<'a> Parse<'a> for WastDirective<'a> {
             Ok(WastDirective::AssertReturnCanonicalNan {
                 span,
                 invoke: parser.parens(|p| p.parse())?,
+                check_type: parser.parse()?
             })
         } else if l.peek::<kw::assert_return_arithmetic_nan>() {
             let span = parser.parse::<kw::assert_return_arithmetic_nan>()?.0;
             Ok(WastDirective::AssertReturnArithmeticNan {
                 span,
                 invoke: parser.parens(|p| p.parse())?,
+                check_type: parser.parse()?
             })
         } else if l.peek::<kw::assert_return_func>() {
             let span = parser.parse::<kw::assert_return_func>()?.0;
@@ -261,5 +301,33 @@ impl<'a> Parse<'a> for QuoteModule<'a> {
         } else {
             Ok(QuoteModule::Module(parser.parse()?))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::{ParseBuffer, parse};
+    use crate::ast::wast::{WastDirective, WastCheckType};
+
+    fn assert_directive_has_check_type(text: &str, expected_check_type: Option<WastCheckType>) {
+        let buffer = ParseBuffer::new(text).unwrap();
+        let directive: WastDirective = parse(&buffer).unwrap();
+        match directive {
+            WastDirective::AssertReturnCanonicalNan { check_type, .. } => assert_eq!(check_type, expected_check_type),
+            WastDirective::AssertReturnArithmeticNan { check_type, .. } => assert_eq!(check_type, expected_check_type),
+            _ => panic!("incorrect directive"),
+        }
+    }
+
+    #[test]
+    fn assert_canonical_nan() {
+        assert_directive_has_check_type("assert_return_canonical_nan (invoke \"foo\" (f32.const 0)) f32x4", Some(WastCheckType::F32x4));
+        assert_directive_has_check_type("assert_return_canonical_nan (invoke \"foo\" (f32.const 0))", None);
+    }
+
+    #[test]
+    fn assert_arithmetic_nan() {
+        assert_directive_has_check_type("assert_return_arithmetic_nan (invoke \"foo\" (f32.const 0)) f64x2", Some(WastCheckType::F64x2));
+        assert_directive_has_check_type("assert_return_arithmetic_nan (invoke \"foo\" (f32.const 0))", None);
     }
 }
