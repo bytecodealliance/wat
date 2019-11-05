@@ -15,15 +15,17 @@ impl Span {
     pub fn linecol_in(&self, text: &str) -> (usize, usize) {
         let mut cur = 0;
         // Use split_terminator instead of lines so that if there is a `\r`,
-        // it is included in the offset calculation. The `+1` values below
-        // account for the `\n`.
+        // it is included in the offset calculation. The `+1` values on columns
+        // below account for the `\n`.
+        // The +1 on lines accounts for line numbers are traditional 1-indexed,
+        // whereas enumerate is 0-indexed.
         for (i, line) in text.split_terminator('\n').enumerate() {
             if cur + line.len() + 1 > self.offset {
-                return (i, self.offset - cur);
+                return (i + 1, self.offset - cur);
             }
             cur += line.len() + 1;
         }
-        (text.lines().count(), 0)
+        (text.lines().count() + 1, 0)
     }
 }
 

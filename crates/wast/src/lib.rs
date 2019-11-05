@@ -198,7 +198,7 @@ impl fmt::Display for Error {
       | {marker:>0$}",
             text.col + 1,
             file = file,
-            line = text.line + 1,
+            line = text.line,
             col = text.col + 1,
             err = err,
             text = text.snippet,
@@ -212,7 +212,9 @@ impl std::error::Error for Error {}
 impl Text {
     fn new(content: &str, span: Span) -> Text {
         let (line, col) = span.linecol_in(content);
-        let snippet = content.lines().nth(line).unwrap_or("").to_string();
+        // nth(line - 1) because linecol_in returns 1-indexed lines (like text editors expect) but
+        // lines().nth() is 0-indexed (like programmers expect)
+        let snippet = content.lines().nth(line - 1).unwrap_or("").to_string();
         Text { line, col, snippet }
     }
 }
