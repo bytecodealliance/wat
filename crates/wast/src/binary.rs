@@ -615,3 +615,14 @@ impl Encode for V8x16Shuffle {
         dst.extend_from_slice(&self.lanes);
     }
 }
+
+impl Encode for SelectTypes {
+    fn encode(&self, dst: &mut Vec<u8>) {
+        if self.tys.len() == 0 {
+            dst.push(0x1b);
+        } else {
+            dst.push(0x1c);
+            self.tys.encode(dst);
+        }
+    }
+}
