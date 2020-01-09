@@ -1,5 +1,6 @@
-use crate::ast::{kw, Float32, Float64};
+use crate::ast::{kw, Float32, Float64, Index};
 use crate::parser::{Parse, Parser, Result};
+use crate::WastDirective::AssertReturn;
 
 /// An expression that is valid inside an `assert_return` directive.
 ///
@@ -10,17 +11,23 @@ use crate::parser::{Parse, Parser, Result};
 /// - the NaN patterns are allowed (they are not allowed in regular `Expression`s).
 #[derive(Debug)]
 #[allow(missing_docs)]
-pub enum AssertExpression {
+pub enum AssertExpression<'a> {
     I32(i32),
     I64(i64),
     F32(NanPattern<Float32>),
     F64(NanPattern<Float64>),
     V128(V128Pattern),
+
+    RefNull,
+    RefIsNull,
+    RefHost(u32),
+    RefFunc(Index<'a>),
+
     #[deprecated(since = "6.0.0", note = "Please use F32/F64 instead; this is only included for parsing the legacy `assert_return_*` directives and should be removed when they are.")]
     LegacyNaN,
 }
 
-impl <'a> Parse<'a> for AssertExpression {
+impl <'a> Parse<'a> for AssertExpression<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
         let keyword = parser.step(|c| {
             match c.keyword() {
@@ -35,6 +42,10 @@ impl <'a> Parse<'a> for AssertExpression {
             "f32.const" => Ok(AssertExpression::F32(parser.parse()?)),
             "f64.const" => Ok(AssertExpression::F64(parser.parse()?)),
             "v128.const" => Ok(AssertExpression::V128(parser.parse()?)),
+            "ref.null" => Ok(AssertExpression::RefNull),
+            "ref.is_null" => Ok(AssertExpression::RefIsNull),
+            "ref.host" => Ok(AssertExpression::RefHost(parser.parse()?)),
+            "ref.func" => Ok(AssertExpression::RefFunc(parser.parse()?)),
             _ => Err(parser.error("expected a [type].const expression"))
         }
     }

@@ -77,7 +77,7 @@ pub enum WastDirective<'a> {
     AssertReturn {
         span: ast::Span,
         exec: WastExecute<'a>,
-        results: Vec<ast::AssertExpression>,
+        results: Vec<ast::AssertExpression<'a>>,
     },
     AssertReturnFunc {
         span: ast::Span,
