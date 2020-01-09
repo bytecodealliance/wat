@@ -19,7 +19,6 @@ pub enum AssertExpression<'a> {
     V128(V128Pattern),
 
     RefNull,
-    RefIsNull,
     RefHost(u32),
     RefFunc(Index<'a>),
 
@@ -43,7 +42,6 @@ impl <'a> Parse<'a> for AssertExpression<'a> {
             "f64.const" => Ok(AssertExpression::F64(parser.parse()?)),
             "v128.const" => Ok(AssertExpression::V128(parser.parse()?)),
             "ref.null" => Ok(AssertExpression::RefNull),
-            "ref.is_null" => Ok(AssertExpression::RefIsNull),
             "ref.host" => Ok(AssertExpression::RefHost(parser.parse()?)),
             "ref.func" => Ok(AssertExpression::RefFunc(parser.parse()?)),
             _ => Err(parser.error("expected a [type].const expression"))
