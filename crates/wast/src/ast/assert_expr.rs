@@ -1,6 +1,5 @@
 use crate::ast::{kw, Float32, Float64, Index};
 use crate::parser::{Parse, Parser, Result};
-use crate::WastDirective::AssertReturn;
 
 /// An expression that is valid inside an `assert_return` directive.
 ///
@@ -22,7 +21,6 @@ pub enum AssertExpression<'a> {
     RefHost(u32),
     RefFunc(Index<'a>),
 
-    #[deprecated(since = "6.0.0", note = "Please use F32/F64 instead; this is only included for parsing the legacy `assert_return_*` directives and should be removed when they are.")]
     LegacyNaN,
 }
 
