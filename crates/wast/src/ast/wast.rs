@@ -1,6 +1,6 @@
 use crate::ast::{self, kw};
 use crate::parser::{Cursor, Parse, Parser, Peek, Result};
-use crate::AssertExpression;
+use crate::{AssertExpression, NanPattern, V128Pattern};
 
 /// A parsed representation of a `*.wast` file.
 ///
@@ -165,42 +165,62 @@ impl<'a> Parse<'a> for WastDirective<'a> {
             Ok(WastDirective::AssertReturn {
                 span,
                 exec: parser.parens(|p| p.parse())?,
-                results: vec![AssertExpression::LegacyNaN]
+                results: vec![AssertExpression::LegacyCanonicalNaN]
             })
         } else if l.peek::<kw::assert_return_canonical_nan_f32x4>() {
             let span = parser.parse::<kw::assert_return_canonical_nan_f32x4>()?.0;
+            let pat = V128Pattern::F32x4([
+                NanPattern::CanonicalNan,
+                NanPattern::CanonicalNan,
+                NanPattern::CanonicalNan,
+                NanPattern::CanonicalNan,
+            ]);
             Ok(WastDirective::AssertReturn {
                 span,
                 exec: parser.parens(|p| p.parse())?,
-                results: vec![AssertExpression::LegacyNaN]
+                results: vec![AssertExpression::V128(pat)]
             })
         } else if l.peek::<kw::assert_return_canonical_nan_f64x2>() {
             let span = parser.parse::<kw::assert_return_canonical_nan_f64x2>()?.0;
+            let pat = V128Pattern::F64x2([
+                NanPattern::CanonicalNan,
+                NanPattern::CanonicalNan,
+            ]);
             Ok(WastDirective::AssertReturn {
                 span,
                 exec: parser.parens(|p| p.parse())?,
-                results: vec![AssertExpression::LegacyNaN]
+                results: vec![AssertExpression::V128(pat)]
             })
         } else if l.peek::<kw::assert_return_arithmetic_nan>() {
             let span = parser.parse::<kw::assert_return_arithmetic_nan>()?.0;
             Ok(WastDirective::AssertReturn {
                 span,
                 exec: parser.parens(|p| p.parse())?,
-                results: vec![AssertExpression::LegacyNaN]
+                results: vec![AssertExpression::LegacyArithmeticNaN]
             })
         } else if l.peek::<kw::assert_return_arithmetic_nan_f32x4>() {
             let span = parser.parse::<kw::assert_return_arithmetic_nan_f32x4>()?.0;
+            let pat = V128Pattern::F32x4([
+                NanPattern::ArithmeticNan,
+                NanPattern::ArithmeticNan,
+                NanPattern::ArithmeticNan,
+                NanPattern::ArithmeticNan,
+            ]);
             Ok(WastDirective::AssertReturn {
                 span,
                 exec: parser.parens(|p| p.parse())?,
-                results: vec![AssertExpression::LegacyNaN]
+                results: vec![AssertExpression::V128(pat)]
             })
         } else if l.peek::<kw::assert_return_arithmetic_nan_f64x2>() {
             let span = parser.parse::<kw::assert_return_arithmetic_nan_f64x2>()?.0;
+            let pat = V128Pattern::F64x2([
+                NanPattern::ArithmeticNan,
+                NanPattern::ArithmeticNan,
+            ]);
             Ok(WastDirective::AssertReturn {
                 span,
                 exec: parser.parens(|p| p.parse())?,
-                results: vec![AssertExpression::LegacyNaN]
+                results: vec![AssertExpression::V128(pat)]
             })
         } else if l.peek::<kw::assert_return_func>() {
             let span = parser.parse::<kw::assert_return_func>()?.0;

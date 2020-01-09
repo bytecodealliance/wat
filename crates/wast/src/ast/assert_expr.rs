@@ -21,7 +21,10 @@ pub enum AssertExpression<'a> {
     RefHost(u32),
     RefFunc(Index<'a>),
 
-    LegacyNaN,
+    // Either matches an f32 or f64 for an arithmetic nan pattern
+    LegacyArithmeticNaN,
+    // Either matches an f32 or f64 for a canonical nan pattern
+    LegacyCanonicalNaN,
 }
 
 impl <'a> Parse<'a> for AssertExpression<'a> {
