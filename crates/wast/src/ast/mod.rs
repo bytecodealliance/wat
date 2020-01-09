@@ -85,6 +85,7 @@ reexport! {
 
 #[cfg(feature = "wasm-module")]
 reexport! {
+    mod assert_expr;
     mod export;
     mod expr;
     mod func;
