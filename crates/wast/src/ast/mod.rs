@@ -139,6 +139,8 @@ pub mod kw {
     custom_keyword!(local);
     custom_keyword!(memory);
     custom_keyword!(module);
+    custom_keyword!(nan_arithmetic = "nan:arithmetic");
+    custom_keyword!(nan_canonical = "nan:canonical");
     custom_keyword!(nullref);
     custom_keyword!(offset);
     custom_keyword!(param);
