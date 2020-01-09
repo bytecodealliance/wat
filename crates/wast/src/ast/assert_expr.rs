@@ -16,6 +16,8 @@ pub enum AssertExpression {
     F32(NanPattern<Float32>),
     F64(NanPattern<Float64>),
     V128(V128Pattern),
+    #[deprecated(since = "6.0.0", note = "Please use F32/F64 instead; this is only included for parsing the legacy `assert_return_*` directives and should be removed when they are.")]
+    LegacyNaN,
 }
 
 impl <'a> Parse<'a> for AssertExpression {

@@ -1,5 +1,6 @@
 use crate::ast::{self, kw};
 use crate::parser::{Cursor, Parse, Parser, Peek, Result};
+use crate::AssertExpression;
 
 /// A parsed representation of a `*.wast` file.
 ///
@@ -78,30 +79,6 @@ pub enum WastDirective<'a> {
         exec: WastExecute<'a>,
         results: Vec<ast::AssertExpression>,
     },
-    AssertReturnCanonicalNan {
-        span: ast::Span,
-        invoke: WastInvoke<'a>,
-    },
-    AssertReturnCanonicalNanF32x4 {
-        span: ast::Span,
-        invoke: WastInvoke<'a>,
-    },
-    AssertReturnCanonicalNanF64x2 {
-        span: ast::Span,
-        invoke: WastInvoke<'a>,
-    },
-    AssertReturnArithmeticNan {
-        span: ast::Span,
-        invoke: WastInvoke<'a>,
-    },
-    AssertReturnArithmeticNanF32x4 {
-        span: ast::Span,
-        invoke: WastInvoke<'a>,
-    },
-    AssertReturnArithmeticNanF64x2 {
-        span: ast::Span,
-        invoke: WastInvoke<'a>,
-    },
     AssertReturnFunc {
         span: ast::Span,
         invoke: WastInvoke<'a>,
@@ -127,12 +104,6 @@ impl WastDirective<'_> {
             WastDirective::Register { span, .. } |
             WastDirective::AssertTrap { span, .. } |
             WastDirective::AssertReturn { span, .. } |
-            WastDirective::AssertReturnCanonicalNan { span, .. } |
-            WastDirective::AssertReturnCanonicalNanF32x4 { span, .. } |
-            WastDirective::AssertReturnCanonicalNanF64x2 { span, .. } |
-            WastDirective::AssertReturnArithmeticNan { span, .. } |
-            WastDirective::AssertReturnArithmeticNanF32x4 { span, .. } |
-            WastDirective::AssertReturnArithmeticNanF64x2 { span, .. } |
             WastDirective::AssertReturnFunc { span, .. } |
             WastDirective::AssertExhaustion { span, .. } |
             WastDirective::AssertUnlinkable { span, .. } |
@@ -191,39 +162,45 @@ impl<'a> Parse<'a> for WastDirective<'a> {
             })
         } else if l.peek::<kw::assert_return_canonical_nan>() {
             let span = parser.parse::<kw::assert_return_canonical_nan>()?.0;
-            Ok(WastDirective::AssertReturnCanonicalNan {
+            Ok(WastDirective::AssertReturn {
                 span,
-                invoke: parser.parens(|p| p.parse())?,
+                exec: parser.parens(|p| p.parse())?,
+                results: vec![AssertExpression::LegacyNaN]
             })
         } else if l.peek::<kw::assert_return_canonical_nan_f32x4>() {
             let span = parser.parse::<kw::assert_return_canonical_nan_f32x4>()?.0;
-            Ok(WastDirective::AssertReturnCanonicalNanF32x4 {
+            Ok(WastDirective::AssertReturn {
                 span,
-                invoke: parser.parens(|p| p.parse())?,
+                exec: parser.parens(|p| p.parse())?,
+                results: vec![AssertExpression::LegacyNaN]
             })
         } else if l.peek::<kw::assert_return_canonical_nan_f64x2>() {
             let span = parser.parse::<kw::assert_return_canonical_nan_f64x2>()?.0;
-            Ok(WastDirective::AssertReturnCanonicalNanF64x2 {
+            Ok(WastDirective::AssertReturn {
                 span,
-                invoke: parser.parens(|p| p.parse())?,
+                exec: parser.parens(|p| p.parse())?,
+                results: vec![AssertExpression::LegacyNaN]
             })
         } else if l.peek::<kw::assert_return_arithmetic_nan>() {
             let span = parser.parse::<kw::assert_return_arithmetic_nan>()?.0;
-            Ok(WastDirective::AssertReturnArithmeticNan {
+            Ok(WastDirective::AssertReturn {
                 span,
-                invoke: parser.parens(|p| p.parse())?,
+                exec: parser.parens(|p| p.parse())?,
+                results: vec![AssertExpression::LegacyNaN]
             })
         } else if l.peek::<kw::assert_return_arithmetic_nan_f32x4>() {
             let span = parser.parse::<kw::assert_return_arithmetic_nan_f32x4>()?.0;
-            Ok(WastDirective::AssertReturnArithmeticNanF32x4 {
+            Ok(WastDirective::AssertReturn {
                 span,
-                invoke: parser.parens(|p| p.parse())?,
+                exec: parser.parens(|p| p.parse())?,
+                results: vec![AssertExpression::LegacyNaN]
             })
         } else if l.peek::<kw::assert_return_arithmetic_nan_f64x2>() {
             let span = parser.parse::<kw::assert_return_arithmetic_nan_f64x2>()?.0;
-            Ok(WastDirective::AssertReturnArithmeticNanF64x2 {
+            Ok(WastDirective::AssertReturn {
                 span,
-                invoke: parser.parens(|p| p.parse())?,
+                exec: parser.parens(|p| p.parse())?,
+                results: vec![AssertExpression::LegacyNaN]
             })
         } else if l.peek::<kw::assert_return_func>() {
             let span = parser.parse::<kw::assert_return_func>()?.0;
@@ -343,9 +320,9 @@ mod tests {
 
     #[test]
     fn assert_nan() {
-        assert_parses_to_directive!("assert_return_canonical_nan_f32x4 (invoke \"foo\" (f32.const 0))", WastDirective::AssertReturnCanonicalNanF32x4 { .. });
-        assert_parses_to_directive!("assert_return_canonical_nan_f64x2 (invoke \"foo\" (f32.const 0))", WastDirective::AssertReturnCanonicalNanF64x2 { .. });
-        assert_parses_to_directive!("assert_return_arithmetic_nan_f32x4 (invoke \"foo\" (f32.const 0))", WastDirective::AssertReturnArithmeticNanF32x4 { .. });
-        assert_parses_to_directive!("assert_return_arithmetic_nan_f64x2 (invoke \"foo\" (f32.const 0))", WastDirective::AssertReturnArithmeticNanF64x2 { .. });
+        assert_parses_to_directive!("assert_return_canonical_nan_f32x4 (invoke \"foo\" (f32.const 0))", WastDirective::AssertReturn { .. });
+        assert_parses_to_directive!("assert_return_canonical_nan_f64x2 (invoke \"foo\" (f32.const 0))", WastDirective::AssertReturn { .. });
+        assert_parses_to_directive!("assert_return_arithmetic_nan_f32x4 (invoke \"foo\" (f32.const 0))", WastDirective::AssertReturn { .. });
+        assert_parses_to_directive!("assert_return_arithmetic_nan_f64x2 (invoke \"foo\" (f32.const 0))", WastDirective::AssertReturn { .. });
     }
 }
