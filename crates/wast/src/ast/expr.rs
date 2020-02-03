@@ -183,7 +183,9 @@ impl<'a> ExpressionParser<'a> {
     ///
     /// The syntactical form of an `if` stament looks like:
     ///
-    ///     (if $clause (then $then) (else $else))
+    /// ```wat
+    /// (if $clause (then $then) (else $else))
+    /// ```
     ///
     /// but it turns out we practically see a few things in the wild:
     ///
