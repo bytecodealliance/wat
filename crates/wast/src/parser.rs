@@ -156,7 +156,7 @@ pub fn parse<'a, T: Parse<'a>>(buf: &'a ParseBuffer<'a>) -> Result<T> {
 /// statement in the WebAssembly text format are parsed by the parent item
 /// parsing `Import`.
 ///
-/// Note that this is just a a convention, so it's not necessarily required of
+/// Note that this is just a convention, so it's not necessarily required for
 /// all types. It's recommended that your types stick to this convention where
 /// possible to avoid nested calls to [`Parser::parens`] or accidentally trying
 /// to parse too many parenthesis.
