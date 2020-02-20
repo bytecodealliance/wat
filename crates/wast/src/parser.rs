@@ -370,7 +370,7 @@ impl<'a> Parser<'a> {
     ///
     /// Typically you always want to use `?` with the result of this method, you
     /// should not handle errors and decide what else to parse. To handle
-    /// branches in parsing, ue [`Parser::peek`].
+    /// branches in parsing, use [`Parser::peek`].
     ///
     /// # Examples
     ///
