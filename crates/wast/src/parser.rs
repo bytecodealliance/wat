@@ -537,7 +537,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Parsea an item surrounded by parentheses.
+    /// Parse an item surrounded by parentheses.
     ///
     /// WebAssembly's text format is all based on s-expressions, so naturally
     /// you're going to want to parse a lot of parenthesized things! As noted in
