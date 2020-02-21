@@ -121,7 +121,7 @@ impl<'a> Module<'a> {
             }
         }
         if starts > 1 {
-            return Err(parser.error("multiple start sections found"))
+            return Err(parser.error("multiple start sections found"));
         }
         Ok(())
     }
