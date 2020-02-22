@@ -205,11 +205,16 @@ fn error_matches(error: &str, message: &str) -> bool {
         || message == "malformed lane index"
         || message == "expected i8 literal"
         || message == "invalid lane length"
+        || message == "unclosed annotation"
+        || message == "malformed annotation id"
         || message == "alignment must be a power of two"
     {
-        return error.contains("expected a ")
-            || error.contains("expected an ")
+        return error.contains("expected ")
             || error.contains("constant out of range");
+    }
+
+    if message == "unclosed string" {
+        return error.contains("unexpected end-of-file");
     }
 
     return false;

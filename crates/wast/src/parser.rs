@@ -67,6 +67,7 @@ use crate::lexer::{Comment, Float, Integer, Lexer, Source, Token};
 use crate::{Error, Span};
 use std::cell::Cell;
 use std::fmt;
+use std::usize;
 
 /// A top-level convenience parseing function that parss a `T` from `buf` and
 /// requires that all tokens in `buf` are consume.
@@ -267,7 +268,7 @@ pub struct ParseBuffer<'a> {
     // list of tokens from the tokenized source (including whitespace and
     // comments), and the second element is the index of the next `Token` token,
     // if any.
-    tokens: Box<[(Source<'a>, Option<usize>)]>,
+    tokens: Box<[(Source<'a>, Cell<usize>)]>,
     input: &'a str,
     cur: Cell<usize>,
 }
@@ -314,24 +315,8 @@ impl ParseBuffer<'_> {
     pub fn new(input: &str) -> Result<ParseBuffer<'_>> {
         let mut tokens = Vec::new();
         for token in Lexer::new(input) {
-            tokens.push((token?, None));
+            tokens.push((token?, Cell::new(0)));
         }
-
-        // Calculate the "next token" for each token in the list. This'll allow
-        // us to advance quickly inside of `advance_token` below instead of
-        // having to skip over all comments/whitespace, perhaps repeatedly.
-        //
-        // To calculate this we go back-to-front, and just keep track of where
-        // the last token was seen and fill that in for all the `next_token`
-        // blanks.
-        let mut last_token = None;
-        for (i, (token, next_token)) in tokens.iter_mut().enumerate().rev() {
-            *next_token = last_token;
-            if let Source::Token(_) = token {
-                last_token = Some(i);
-            }
-        }
-
         Ok(ParseBuffer {
             tokens: tokens.into_boxed_slice(),
             cur: Cell::new(0),
@@ -601,6 +586,108 @@ impl<'a> Parser<'a> {
         return res;
     }
 
+    /// Attempt to parse a WebAssembly [annotation directive][annotation]
+    ///
+    /// [annotation]: https://github.com/WebAssembly/annotations
+    ///
+    /// Annotations are a proposal to the text format which allow for
+    /// semi-structured data to be placed into the textual format. The general
+    /// intention is to support round-tripping a binary to text and back again,
+    /// allowing sections like custom sections to get represented in the text
+    /// format.
+    ///
+    /// This method will attempt to parse an annotation with the name `name`
+    /// provided as the next token in the token stream. This method will skip
+    /// all non-matching annotations and all comments to get to the next
+    /// annotation directive matching `name`. Note that if you want to be sure
+    /// to parse all annotations, or parse comments, you'll want to use
+    /// lower-level `Cursor` methods rather than this higher-level method which
+    /// simply searches for one particular annotation.
+    ///
+    /// If an annotation of the `name` provided is found, then `f` is invoked
+    /// to parse the contents of the annotation. The entire contents of the
+    /// annotation must be parsed or an error will be returned automatically.
+    ///
+    /// # Returns
+    ///
+    /// An error is returned if any parsing fails, such as if `f` fails to
+    /// parse, annotations are malformed, etc.
+    ///
+    /// `Ok(None)` is returned if, after skipping all comments and annotations,
+    /// no annotation matching `name` was found. In this case `f` will not be
+    /// invoked.
+    ///
+    /// `Ok(Some(..))` is returned if a matching annotation is found and if `f`
+    /// returns a successful parse.
+    ///
+    /// # Examples
+    ///
+    /// A example of using this is parsing the `@name` directive inside a
+    /// module: the exact definition, but it's close enough!
+    ///
+    /// ```
+    /// # use wast::*;
+    /// # use wast::parser::*;
+    /// struct Module<'a> {
+    ///     name: Option<String>,
+    ///     fields: Vec<ModuleField<'a>>,
+    /// }
+    ///
+    /// impl<'a> Parse<'a> for Module<'a> {
+    ///     fn parse(parser: Parser<'a>) -> Result<Self> {
+    ///         // Modules start out with a `module` keyword
+    ///         parser.parse::<kw::module>()?;
+    ///
+    ///         // Here we parse an optional `@name` directive, if present.
+    ///         let name = parser.annotation("name", String::parse)?;
+    ///
+    ///         // ... parse fields here as usual with `parser` ...
+    /// #       let fields = Vec::new();
+    ///
+    ///         Ok(Module { fields, name })
+    ///     }
+    /// }
+    /// ```
+    pub fn annotation<T>(self, name: &str, f: impl FnOnce(Parser<'a>) -> Result<T>) -> Result<Option<T>> {
+        let before = self.buf.cur.get();
+        let res = self.step(|mut cursor| {
+            loop {
+                // skip any leading comments...
+                if let Some((_, c)) = cursor.comment() {
+                    cursor = c;
+                    continue;
+                }
+                // otherwise expect an annotation
+                let (a, c) = match cursor.annotation() {
+                    Some(p) => p,
+                    None => return Ok((None, cursor)),
+                };
+                cursor = c;
+                // If we found an annotation with the right name, we stop here
+                // and continue parsing below...
+                if a == name {
+                    break;
+                }
+                // .. otherwise we skip this annotation and move to the next
+                match cursor.skip_annotation_internals() {
+                    Some(c) => cursor = c,
+                    None => return Err(cursor.error("unclosed annotation")),
+                }
+            }
+            cursor.parser.buf.cur.set(cursor.cur);
+            let result = f(cursor.parser)?;
+            cursor.cur = cursor.parser.buf.cur.get();
+            match cursor.rparen() {
+                Some(rest) => Ok((Some(result), rest)),
+                None => Err(cursor.error("expected `)`")),
+            }
+        });
+        if res.is_err() {
+            self.buf.cur.set(before);
+        }
+        return res;
+    }
+
     fn cursor(self) -> Cursor<'a> {
         Cursor {
             parser: self,
@@ -792,8 +879,8 @@ impl<'a> Cursor<'a> {
     /// Attempts to advance this cursor if the current token is a
     /// [`Source::Comment`](crate::lexer::Comment)
     ///
-    /// This function will skip any whitespace tokens, but it will not skip any
-    /// other tokens.
+    /// This function will only skip whitespace, no other tokens. For example
+    /// this doesn't skip annotations.
     pub fn comment(mut self) -> Option<(&'a Comment<'a>, Self)> {
         let comment = loop {
             match &self.parser.buf.tokens.get(self.cur)?.0 {
@@ -810,28 +897,133 @@ impl<'a> Cursor<'a> {
         Some((comment, self))
     }
 
+    /// Attempts to advance this cursor if the next two tokens are `(` and
+    /// `@foo`, parsing a wasm [annotation].
+    ///
+    /// This function will only skip whitespace, no other tokens. For example
+    /// this doesn't skip comments.
+    ///
+    /// [annotation]: https://github.com/WebAssembly/annotations
+    pub fn annotation(mut self) -> Option<(&'a str, Self)> {
+        let annot = loop {
+            match &self.parser.buf.tokens.get(self.cur)?.0 {
+                // assume tokens are the start of an annotation, and `None`
+                // will  get returned if we're wrong in `annotation_start`.
+                Source::Token(_) => break self.annotation_start()?,
+                // not skipping comments
+                Source::Comment(_) => return None,
+                // skipping whitespace ...
+                Source::Whitespace(_) => self.cur += 1,
+            }
+        };
+        self.cur += 2; // skip the `(` and the `@foo`
+        Some((annot, self))
+    }
+
+    /// After `annotation` is called, skips the rest of the annotation until the
+    /// end.
+    pub fn skip_annotation_internals(mut self) -> Option<Cursor<'a>> {
+        let mut depth = 1;
+        while depth > 0 {
+            match &self.parser.buf.tokens.get(self.cur)?.0 {
+                Source::Token(Token::LParen(_)) => depth += 1,
+                Source::Token(Token::RParen(_)) => depth -= 1,
+                _ => {}
+            }
+            self.cur += 1;
+        }
+        Some(self)
+    }
+
     fn advance_token(&mut self) -> Option<&'a Token<'a>> {
         let (token, next) = self.parser.buf.tokens.get(self.cur)?;
         match token {
-            // If the current token is a `Token`, then only advance ourselves
-            // one token further. That way if after this `Token` you want
-            // comments, we can find the comments!
-            Source::Token(t) => {
+            // If we're currently pointing at a token, and it's not the start
+            // of an annotation, then we return that token and advance
+            // ourselves one token...
+            Source::Token(t) if self.annotation_start().is_none() => {
                 self.cur += 1;
                 Some(t)
             }
 
-            // Otherwise this is a comment or whitespace token. In that case
-            // `next` points to the next `Token` token if `next` was listed.
+            // ... otherwise we need to skip the current token, and possibly
+            // more. Here we're skipping whitespace, comments, annotations, etc.
+            // Basically stuff that's intended to not be that relevant to the
+            // text format. This is a pretty common operation, though, and we
+            // may do it multiple times through peeks and such. As a result
+            // this is somewhat cached.
+            //
+            // Each token has a `Cell` pointing to the index of the next "real"
+            // token after it, or where to resume parsing. This is basically
+            // the return value (ish) of this function being cached. If the
+            // next pointer is 0 we haven't calculated it, otherwise it's
+            // either MAX (no next, we reached the end) or a number which
+            // points to the next token.
+            //
+            // Here we process this cached value, calculating it if necessary
+            // and then acting on whatever the cached value is.
             _ => {
-                let next = (*next)?;
-                let (token, _) = &self.parser.buf.tokens[next];
+                let mut n = next.get();
+                if n == 0 {
+                    n = self.find_next().map(|_| self.cur).unwrap_or(usize::MAX);
+                    next.set(n);
+                }
+                if n == usize::MAX {
+                    return None;
+                }
+                let (token, _) = &self.parser.buf.tokens[n];
                 match token {
                     Source::Token(t) => {
-                        self.cur = next + 1;
+                        self.cur = n + 1;
                         Some(t)
                     }
                     _ => unreachable!(),
+                }
+            }
+        }
+    }
+
+    /// Attempts to extract an annotation starting at position `i`.
+    ///
+    /// The position must point to a `(` token followed by `@foo`, no
+    /// whitespace/etc ignored. Returns the name of the annotation (without the
+    /// `@`) if found.
+    fn annotation_start(&self) -> Option<&'a str> {
+        match self.parser.buf.tokens.get(self.cur).map(|p| &p.0) {
+            Some(Source::Token(Token::LParen(_))) => {}
+            _ => return None,
+        }
+        match self.parser.buf.tokens.get(self.cur + 1).map(|p| &p.0) {
+            Some(Source::Token(Token::Reserved(n))) => {
+                if n.starts_with("@") && n.len() > 1 {
+                    Some(&n[1..])
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Finds the next "real" token from the current position onwards.
+    ///
+    /// This is a somewhat expensive operation to call quite a lot, so it's
+    /// cached in the token list. See the comment above in `advance_token` for
+    /// how this works.
+    fn find_next(&mut self) -> Option<()> {
+        loop {
+            let (token, _) = self.parser.buf.tokens.get(self.cur)?;
+            // Here's the magic of skipping wasm annotations if you're
+            // otherwise not trying to parse them.
+            if self.annotation_start().is_some() {
+                self.cur += 2;
+                *self = self.clone().skip_annotation_internals()?;
+            } else {
+                // and otherwise we skip all comments/whitespace and otherwise
+                // get real intersted once a normal `Token` pops up.
+                match token {
+                    Source::Token(_) => return Some(()),
+                    _ => self.cur += 1,
                 }
             }
         }

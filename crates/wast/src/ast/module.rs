@@ -1,5 +1,6 @@
 use crate::ast::{self, kw};
 use crate::parser::{Parse, Parser, Result};
+use std::str;
 
 pub use crate::resolve::Names;
 
@@ -16,14 +17,13 @@ pub struct Wat<'a> {
 impl<'a> Parse<'a> for Wat<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
         let module = if !parser.peek2::<kw::module>() {
-            let mut fields = Vec::new();
-            // must have at least one field
-            fields.push(parser.parens(ModuleField::parse)?);
-            while !parser.is_empty() {
-                fields.push(parser.parens(ModuleField::parse)?);
+            let fields = ModuleField::parse_remaining(parser)?;
+            if fields.is_empty() {
+                return Err(parser.error("expected at least one module field"));
             }
             Module {
                 span: ast::Span { offset: 0 },
+                id: None,
                 name: None,
                 kind: ModuleKind::Text(fields),
             }
@@ -39,8 +39,10 @@ impl<'a> Parse<'a> for Wat<'a> {
 pub struct Module<'a> {
     /// Where this `module` was defined
     pub span: ast::Span,
-    /// An optional name to refer to this module by.
-    pub name: Option<ast::Id<'a>>,
+    /// An optional identifier this module is known by
+    pub id: Option<ast::Id<'a>>,
+    /// An optional `@name` annotation for this module
+    pub name: Option<&'a str>,
     /// What kind of module this was parsed as.
     pub kind: ModuleKind<'a>,
 }
@@ -130,7 +132,56 @@ impl<'a> Module<'a> {
 impl<'a> Parse<'a> for Module<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
         let span = parser.parse::<kw::module>()?.0;
-        let name = parser.parse()?;
+        let id = parser.parse()?;
+
+        // This is a special incantation unfortunately. We want to in theory
+        // write:
+        //
+        //      let name = parser.anntation("name", String::parse)?;
+        //
+        // here, but that won't work because it'll swallow up any other
+        // annotations leading up to the next non-annotation token. For example
+        // any @custom annotations in the module would get swallowed up. As a
+        // result we want to skip every annotation here *except* @custom, hence
+        // the custom loop.
+        //
+        // If this comes up in other parsers as well we should make a dedicated
+        // method for this...
+        let name = parser.step(|mut cursor| {
+            let orig = cursor.clone();
+            loop {
+                // skip any comments that show up
+                if let Some((_, c)) = cursor.comment() {
+                    cursor = c;
+                    continue;
+                }
+                match cursor.annotation() {
+                    // If we see a name annotation then attempt to parse it.
+                    Some(("name", c)) => {
+                        let str_and_cursor = c
+                            .string()
+                            .and_then(|(s, c)| str::from_utf8(s).ok().map(|s| (s, c)))
+                            .and_then(|(s, c)| c.rparen().map(|c| (s, c)));
+                        return match str_and_cursor {
+                            Some((a, b)) => Ok((Some(a), b)),
+                            None => Ok((None, orig)),
+                        };
+                    }
+
+                    // If we see @custom then bail out since this is a custom
+                    // sectio we'll want to parse later. Additionally if we see
+                    // no annotation also bail out.
+                    Some(("custom", _)) | None => return Ok((None, orig)),
+
+                    // any other annotation needs to be skipped, so do that
+                    // here
+                    Some((_, c)) => match c.skip_annotation_internals() {
+                        Some(c) => cursor = c,
+                        None => return Err(c.error("unclosed annotation")),
+                    },
+                }
+            }
+        })?;
 
         let kind = if parser.peek::<kw::binary>() {
             parser.parse::<kw::binary>()?;
@@ -140,13 +191,14 @@ impl<'a> Parse<'a> for Module<'a> {
             }
             ModuleKind::Binary(data)
         } else {
-            let mut fields = Vec::new();
-            while !parser.is_empty() {
-                fields.push(parser.parens(ModuleField::parse)?);
-            }
-            ModuleKind::Text(fields)
+            ModuleKind::Text(ModuleField::parse_remaining(parser)?)
         };
-        Ok(Module { span, name, kind })
+        Ok(Module {
+            span,
+            id,
+            name,
+            kind,
+        })
     }
 }
 
@@ -164,6 +216,24 @@ pub enum ModuleField<'a> {
     Start(ast::Index<'a>),
     Elem(ast::Elem<'a>),
     Data(ast::Data<'a>),
+    Custom(ast::Custom<'a>),
+}
+
+impl<'a> ModuleField<'a> {
+    fn parse_remaining(parser: Parser<'a>) -> Result<Vec<ModuleField>> {
+        let mut fields = Vec::new();
+        loop {
+            if let Some(custom) = parser.annotation("custom", |p| p.parse())? {
+                fields.push(ModuleField::Custom(custom));
+                continue;
+            }
+            if parser.is_empty() {
+                break;
+            }
+            fields.push(parser.parens(ModuleField::parse)?);
+        }
+        Ok(fields)
+    }
 }
 
 impl<'a> Parse<'a> for ModuleField<'a> {
