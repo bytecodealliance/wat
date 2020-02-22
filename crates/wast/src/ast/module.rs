@@ -164,7 +164,7 @@ impl<'a> Parse<'a> for Module<'a> {
                             .and_then(|(s, c)| c.rparen().map(|c| (s, c)));
                         return match str_and_cursor {
                             Some((a, b)) => Ok((Some(a), b)),
-                            None => Ok((None, orig)),
+                            None => return Err(orig.error("malformed @name directive")),
                         };
                     }
 

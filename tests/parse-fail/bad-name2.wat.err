@@ -1,5 +1,5 @@
-expected a string
-     --> tests/parse-fail/bad-name2.wat:1:16
+malformed @name directive
+     --> tests/parse-fail/bad-name2.wat:1:18
       |
     1 | (module (@name 2))
-      |                ^
+      |                  ^
