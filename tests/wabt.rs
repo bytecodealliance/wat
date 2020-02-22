@@ -209,8 +209,7 @@ fn error_matches(error: &str, message: &str) -> bool {
         || message == "malformed annotation id"
         || message == "alignment must be a power of two"
     {
-        return error.contains("expected ")
-            || error.contains("constant out of range");
+        return error.contains("expected ") || error.contains("constant out of range");
     }
 
     if message == "unclosed string" {

@@ -648,7 +648,11 @@ impl<'a> Parser<'a> {
     ///     }
     /// }
     /// ```
-    pub fn annotation<T>(self, name: &str, f: impl FnOnce(Parser<'a>) -> Result<T>) -> Result<Option<T>> {
+    pub fn annotation<T>(
+        self,
+        name: &str,
+        f: impl FnOnce(Parser<'a>) -> Result<T>,
+    ) -> Result<Option<T>> {
         let before = self.buf.cur.get();
         let res = self.step(|mut cursor| {
             loop {
