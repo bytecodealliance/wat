@@ -269,10 +269,20 @@ pub struct ParseBuffer<'a> {
     // list of tokens from the tokenized source (including whitespace and
     // comments), and the second element is how to skip this token, if it can be
     // skipped.
-    tokens: Box<[(Source<'a>, Cell<usize>)]>,
+    tokens: Box<[(Source<'a>, Cell<NextTokenAt>)]>,
     input: &'a str,
     cur: Cell<usize>,
     known_annotations: RefCell<HashMap<String, usize>>,
+}
+
+#[derive(Copy, Clone)]
+enum NextTokenAt {
+    /// Haven't computed where the next token is yet.
+    Unknown,
+    /// Previously computed the index of the next token.
+    Index(usize),
+    /// There is no next token, this is the last token.
+    Eof,
 }
 
 /// An in-progress parser for the tokens of a WebAssembly text file.
@@ -317,7 +327,7 @@ impl ParseBuffer<'_> {
     pub fn new(input: &str) -> Result<ParseBuffer<'_>> {
         let mut tokens = Vec::new();
         for token in Lexer::new(input) {
-            tokens.push((token?, Cell::new(0)));
+            tokens.push((token?, Cell::new(NextTokenAt::Unknown)));
         }
         Ok(ParseBuffer {
             tokens: tokens.into_boxed_slice(),
@@ -1009,24 +1019,29 @@ impl<'a> Cursor<'a> {
             // may do it multiple times through peeks and such. As a result
             // this is somewhat cached.
             //
-            // The `next` field, if zero, means we haven't calculated the next
-            // token. Otherwise it's an index of where to resume searching for
-            // the next token.
+            // The `next` field, if "unknown", means we haven't calculated the
+            // next token. Otherwise it's an index of where to resume searching
+            // for the next token.
             //
             // Note that this entire operation happens in a loop (hence the
             // "somewhat cached") because the set of known annotations is
             // dynamic and we can't cache which annotations are skipped. What we
             // can do though is cache the number of tokens in the annotation so
             // we know how to skip ahead of it.
-            let mut n = next.get();
-            if n == 0 {
-                n = self.find_next().unwrap_or(usize::MAX);
-                next.set(n);
+            match next.get() {
+                NextTokenAt::Unknown => match self.find_next() {
+                    Some(i) => {
+                        next.set(NextTokenAt::Index(i));
+                        self.cur = i;
+                    }
+                    None => {
+                        next.set(NextTokenAt::Eof);
+                        return None;
+                    }
+                },
+                NextTokenAt::Eof => return None,
+                NextTokenAt::Index(i) => self.cur = i,
             }
-            if n == usize::MAX {
-                return None;
-            }
-            self.cur = n;
         }
     }
 
