@@ -1,9 +1,12 @@
-use crate::ast::{self, kw};
+use crate::ast::{self, kw, annotation};
 use crate::parser::{Parse, Parser, Result};
 
 /// A wasm custom section within a module.
 #[derive(Debug)]
 pub struct Custom<'a> {
+    /// Where this `@custom` was defined.
+    pub span: ast::Span,
+
     /// Name of the custom section.
     pub name: &'a str,
 
@@ -46,6 +49,7 @@ pub enum CustomPlaceAnchor {
 
 impl<'a> Parse<'a> for Custom<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
+        let span = parser.parse::<annotation::custom>()?.0;
         let name = parser.parse()?;
         let place = if parser.peek::<ast::LParen>() {
             parser.parens(|p| p.parse())?
@@ -56,7 +60,7 @@ impl<'a> Parse<'a> for Custom<'a> {
         while !parser.is_empty() {
             data.push(parser.parse()?);
         }
-        Ok(Custom { name, place, data })
+        Ok(Custom { span, name, place, data })
     }
 }
 

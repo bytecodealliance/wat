@@ -75,49 +75,13 @@ macro_rules! custom_keyword {
     };
 }
 
-/// A macro to create a custom keyword parser.
-///
-/// This macro is invoked in one of two forms:
-///
-/// ```
-/// // keyword derived from the Rust identifier:
-/// wast::custom_keyword!(foo);
-///
-/// // or an explicitly specified string representation of the keyword:
-/// wast::custom_keyword!(my_keyword = "the-wasm-keyword");
-/// ```
-///
-/// This can then be used to parse custom keyword for custom items, such as:
-///
-/// ```
-/// use wast::parser::{Parser, Result, Parse};
-///
-/// struct InlineModule<'a> {
-///     inline_text: &'a str,
-/// }
-///
-/// mod kw {
-///     wast::custom_keyword!(inline);
-/// }
-///
-/// // Parse an inline string module of the form:
-/// //
-/// //    (inline "(module (func))")
-/// impl<'a> Parse<'a> for InlineModule<'a> {
-///     fn parse(parser: Parser<'a>) -> Result<Self> {
-///         parser.parse::<kw::inline>()?;
-///         Ok(InlineModule {
-///             inline_text: parser.parse()?,
-///         })
-///     }
-/// }
-/// ```
+/// A macro to create a custom annotation
 #[macro_export]
 macro_rules! annotation {
     ($name:ident) => {
-        $crate::custom_keyword!($name = stringify!($name));
+        $crate::annotation!($name = stringify!($name));
     };
-    ($name:ident = $kw:expr) => {
+    ($name:ident = $annotation:expr) => {
         #[allow(non_camel_case_types)]
         #[allow(missing_docs)]
         #[derive(Debug)]
@@ -126,27 +90,27 @@ macro_rules! annotation {
         impl<'a> $crate::parser::Parse<'a> for $name {
             fn parse(parser: $crate::parser::Parser<'a>) -> $crate::parser::Result<Self> {
                 parser.step(|c| {
-                    if let Some((kw, rest)) = c.keyword() {
-                        if kw == $kw {
+                    if let Some((a, rest)) = c.annotation() {
+                        if a == $annotation {
                             return Ok(($name(c.cur_span()), rest));
                         }
                     }
-                    Err(c.error(concat!("expected keyword `", $kw, "`")))
+                    Err(c.error(concat!("expected annotation `@", $annotation, "`")))
                 })
             }
         }
 
         impl $crate::parser::Peek for $name {
             fn peek(cursor: $crate::parser::Cursor<'_>) -> bool {
-                if let Some((kw, _rest)) = cursor.keyword() {
-                    kw == $kw
+                if let Some((a, _rest)) = cursor.annotation() {
+                    a == $annotation
                 } else {
                     false
                 }
             }
 
             fn display() -> &'static str {
-                concat!("`", $kw, "`")
+                concat!("`@", $annotation, "`")
             }
         }
     };
@@ -246,4 +210,10 @@ pub mod kw {
     custom_keyword!(table);
     custom_keyword!(then);
     custom_keyword!(v128);
+}
+
+/// Common annotations used to parse WebAssembly text files.
+pub mod annotation {
+    annotation!(custom);
+    annotation!(name);
 }

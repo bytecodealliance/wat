@@ -187,7 +187,7 @@ impl<'a> Parse<'a> for MemoryType {
 pub struct FunctionType<'a> {
     /// The parameters of a function, optionally each having an identifier for
     /// name resolution and a name for the debug name section.
-    pub params: Vec<(Option<ast::Id<'a>>, Option<&'a str>, ValType)>,
+    pub params: Vec<(Option<ast::Id<'a>>, Option<ast::NameAnnotation<'a>>, ValType)>,
     /// The results types of a function.
     pub results: Vec<ValType>,
 }
@@ -209,10 +209,7 @@ impl<'a> FunctionType<'a> {
                         return Ok(());
                     }
                     let (id, name) = if allow_names {
-                        (
-                            p.parse::<Option<_>>()?,
-                            p.annotation("name", |p| p.parse())?,
-                        )
+                        (p.parse::<Option<_>>()?, p.parse::<Option<_>>()?)
                     } else {
                         (None, None)
                     };

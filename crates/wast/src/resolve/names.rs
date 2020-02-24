@@ -34,7 +34,7 @@ pub struct Resolver<'a> {
 }
 
 struct Type<'a> {
-    params: Vec<(Option<Id<'a>>, Option<&'a str>, ValType)>,
+    params: Vec<(Option<Id<'a>>, Option<NameAnnotation<'a>>, ValType)>,
     results: Vec<ValType>,
 }
 

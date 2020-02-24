@@ -612,8 +612,8 @@ struct Names<'a> {
 }
 
 fn find_names<'a>(module: &Module<'a>, fields: &[ModuleField<'a>]) -> Names<'a> {
-    fn get_name<'a>(id: Option<Id<'a>>, name: Option<&'a str>) -> Option<&'a str> {
-        name.or(id.map(|id| id.name()))
+    fn get_name<'a>(id: &Option<Id<'a>>, name: &Option<NameAnnotation<'a>>) -> Option<&'a str> {
+        name.as_ref().map(|n| n.name).or(id.map(|id| id.name()))
     }
 
     let mut funcs = Vec::new();
@@ -627,27 +627,27 @@ fn find_names<'a>(module: &Module<'a>, fields: &[ModuleField<'a>]) -> Names<'a> 
                     _ => continue,
                 }
 
-                if let Some(name) = get_name(i.id, i.name) {
+                if let Some(name) = get_name(&i.id, &i.name) {
                     funcs.push((idx, name));
                 }
 
                 idx += 1;
             }
             ModuleField::Func(f) => {
-                if let Some(name) = get_name(f.id, f.name) {
+                if let Some(name) = get_name(&f.id, &f.name) {
                     funcs.push((idx, name));
                 }
                 let mut local_names = Vec::new();
                 let mut local_idx = 0;
                 for (id, name, _) in f.ty.ty.params.iter() {
-                    if let Some(name) = get_name(*id, *name) {
+                    if let Some(name) = get_name(id, name) {
                         local_names.push((local_idx, name));
                     }
                     local_idx += 1;
                 }
                 if let FuncKind::Inline { locals, .. } = &f.kind {
                     for (id, name, _) in locals {
-                        if let Some(name) = get_name(*id, *name) {
+                        if let Some(name) = get_name(id, name) {
                             local_names.push((local_idx, name));
                         }
                         local_idx += 1;
@@ -663,7 +663,7 @@ fn find_names<'a>(module: &Module<'a>, fields: &[ModuleField<'a>]) -> Names<'a> 
     }
 
     Names {
-        module: get_name(module.id, module.name),
+        module: get_name(&module.id, &module.name),
         funcs,
         locals,
     }

@@ -1,6 +1,5 @@
-use crate::ast::{self, kw};
+use crate::ast::{self, kw, annotation};
 use crate::parser::{Parse, Parser, Result};
-use std::str;
 
 pub use crate::resolve::Names;
 
@@ -42,7 +41,7 @@ pub struct Module<'a> {
     /// An optional identifier this module is known by
     pub id: Option<ast::Id<'a>>,
     /// An optional `@name` annotation for this module
-    pub name: Option<&'a str>,
+    pub name: Option<ast::NameAnnotation<'a>>,
     /// What kind of module this was parsed as.
     pub kind: ModuleKind<'a>,
 }
@@ -133,55 +132,7 @@ impl<'a> Parse<'a> for Module<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
         let span = parser.parse::<kw::module>()?.0;
         let id = parser.parse()?;
-
-        // This is a special incantation unfortunately. We want to in theory
-        // write:
-        //
-        //      let name = parser.anntation("name", String::parse)?;
-        //
-        // here, but that won't work because it'll swallow up any other
-        // annotations leading up to the next non-annotation token. For example
-        // any @custom annotations in the module would get swallowed up. As a
-        // result we want to skip every annotation here *except* @custom, hence
-        // the custom loop.
-        //
-        // If this comes up in other parsers as well we should make a dedicated
-        // method for this...
-        let name = parser.step(|mut cursor| {
-            let orig = cursor.clone();
-            loop {
-                // skip any comments that show up
-                if let Some((_, c)) = cursor.comment() {
-                    cursor = c;
-                    continue;
-                }
-                match cursor.annotation() {
-                    // If we see a name annotation then attempt to parse it.
-                    Some(("name", c)) => {
-                        let str_and_cursor = c
-                            .string()
-                            .and_then(|(s, c)| str::from_utf8(s).ok().map(|s| (s, c)))
-                            .and_then(|(s, c)| c.rparen().map(|c| (s, c)));
-                        return match str_and_cursor {
-                            Some((a, b)) => Ok((Some(a), b)),
-                            None => return Err(orig.error("malformed @name directive")),
-                        };
-                    }
-
-                    // If we see @custom then bail out since this is a custom
-                    // section we'll want to parse later. Additionally if we
-                    // see no annotation also bail out.
-                    Some(("custom", _)) | None => return Ok((None, orig)),
-
-                    // any other annotation needs to be skipped, so do that
-                    // here
-                    Some((_, c)) => match c.skip_annotation_internals() {
-                        Some(c) => cursor = c,
-                        None => return Err(c.error("unclosed annotation")),
-                    },
-                }
-            }
-        })?;
+        let name = parser.parse()?;
 
         let kind = if parser.peek::<kw::binary>() {
             parser.parse::<kw::binary>()?;
@@ -222,14 +173,7 @@ pub enum ModuleField<'a> {
 impl<'a> ModuleField<'a> {
     fn parse_remaining(parser: Parser<'a>) -> Result<Vec<ModuleField>> {
         let mut fields = Vec::new();
-        loop {
-            if let Some(custom) = parser.annotation("custom", |p| p.parse())? {
-                fields.push(ModuleField::Custom(custom));
-                continue;
-            }
-            if parser.is_empty() {
-                break;
-            }
+        while !parser.is_empty() {
             fields.push(parser.parens(ModuleField::parse)?);
         }
         Ok(fields)
@@ -268,6 +212,9 @@ impl<'a> Parse<'a> for ModuleField<'a> {
         }
         if parser.peek::<kw::data>() {
             return Ok(ModuleField::Data(parser.parse()?));
+        }
+        if parser.peek::<annotation::custom>() {
+            return Ok(ModuleField::Custom(parser.parse()?));
         }
         Err(parser.error("expected valid module field"))
     }

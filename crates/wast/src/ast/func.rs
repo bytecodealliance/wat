@@ -12,7 +12,7 @@ pub struct Func<'a> {
     /// resolution.
     pub id: Option<ast::Id<'a>>,
     /// An optional name for this function stored in the debug name section.
-    pub name: Option<&'a str>,
+    pub name: Option<ast::NameAnnotation<'a>>,
     /// If present, inline export annotations which indicate names this
     /// definition should be exported under.
     pub exports: ast::InlineExport<'a>,
@@ -43,7 +43,7 @@ pub enum FuncKind<'a> {
         /// The list of locals, if any, for this function. Each local has an
         /// optional identifier for name resolution and name for the debug name
         /// section associated with it.
-        locals: Vec<(Option<ast::Id<'a>>, Option<&'a str>, ast::ValType)>,
+        locals: Vec<(Option<ast::Id<'a>>, Option<ast::NameAnnotation<'a>>, ast::ValType)>,
 
         /// The instructions of the function.
         expression: ast::Expression<'a>,
@@ -54,7 +54,7 @@ impl<'a> Parse<'a> for Func<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
         let span = parser.parse::<kw::func>()?.0;
         let id = parser.parse()?;
-        let name = parser.annotation("name", |p| p.parse())?;
+        let name = parser.parse()?;
         let exports = parser.parse()?;
 
         let (ty, kind) = if parser.peek2::<kw::import>() {
@@ -73,7 +73,7 @@ impl<'a> Parse<'a> for Func<'a> {
                         return Ok(());
                     }
                     let id: Option<_> = p.parse()?;
-                    let name = p.annotation("name", |p| p.parse())?;
+                    let name: Option<_> = p.parse()?;
                     let ty = p.parse()?;
                     let parse_more = id.is_none() && name.is_none();
                     locals.push((id, name, ty));

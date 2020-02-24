@@ -15,7 +15,7 @@ pub struct Import<'a> {
     pub id: Option<ast::Id<'a>>,
     /// An optional name which, for functions, will get inserted into the debug
     /// name section.
-    pub name: Option<&'a str>,
+    pub name: Option<ast::NameAnnotation<'a>>,
     /// What kind of item is being imported.
     pub kind: ImportKind<'a>,
 }
@@ -41,7 +41,7 @@ impl<'a> Parse<'a> for Import<'a> {
                 parser.parse::<kw::func>()?;
                 Ok((
                     parser.parse()?,
-                    parser.annotation("name", |p| p.parse())?,
+                    parser.parse()?,
                     ImportKind::Func(parser.parse()?),
                 ))
             } else if l.peek::<kw::table>() {
