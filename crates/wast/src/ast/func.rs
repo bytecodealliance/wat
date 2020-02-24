@@ -11,7 +11,7 @@ pub struct Func<'a> {
     /// An identifier that this function is resolved with (optionally) for name
     /// resolution.
     pub id: Option<ast::Id<'a>>,
-    /// An optional name for this function stored in the debug name section.
+    /// An optional name for this function stored in the custom `name` section.
     pub name: Option<ast::NameAnnotation<'a>>,
     /// If present, inline export annotations which indicate names this
     /// definition should be exported under.
@@ -41,8 +41,8 @@ pub enum FuncKind<'a> {
     /// Almost all functions, those defined inline in a wasm module.
     Inline {
         /// The list of locals, if any, for this function. Each local has an
-        /// optional identifier for name resolution and name for the debug name
-        /// section associated with it.
+        /// optional identifier for name resolution and name for the custom
+        /// `name` section associated with it.
         locals: Vec<(Option<ast::Id<'a>>, Option<ast::NameAnnotation<'a>>, ast::ValType)>,
 
         /// The instructions of the function.

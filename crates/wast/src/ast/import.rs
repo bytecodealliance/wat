@@ -13,8 +13,8 @@ pub struct Import<'a> {
     /// An optional identifier used during name resolution to refer to this item
     /// from the rest of the module.
     pub id: Option<ast::Id<'a>>,
-    /// An optional name which, for functions, will get inserted into the debug
-    /// name section.
+    /// An optional name which, for functions, will be stored in the
+    /// custom `name` section.
     pub name: Option<ast::NameAnnotation<'a>>,
     /// What kind of item is being imported.
     pub kind: ImportKind<'a>,
