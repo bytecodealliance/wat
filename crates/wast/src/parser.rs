@@ -1068,7 +1068,7 @@ impl<'a> Cursor<'a> {
                 }
                 self.cur += 1;
             }
-            return Some(self.cur)
+            return Some(self.cur);
         }
 
         // ... otherwise we're pointing at whitespace/comments, so we need to
