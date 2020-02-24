@@ -15,6 +15,8 @@ pub struct Wat<'a> {
 
 impl<'a> Parse<'a> for Wat<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
+        let _r = parser.register_annotation("name");
+        let _r = parser.register_annotation("custom");
         let module = if !parser.peek2::<kw::module>() {
             let fields = ModuleField::parse_remaining(parser)?;
             if fields.is_empty() {
@@ -130,6 +132,8 @@ impl<'a> Module<'a> {
 
 impl<'a> Parse<'a> for Module<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
+        let _r = parser.register_annotation("name");
+        let _r = parser.register_annotation("custom");
         let span = parser.parse::<kw::module>()?.0;
         let id = parser.parse()?;
         let name = parser.parse()?;
