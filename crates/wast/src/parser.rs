@@ -622,7 +622,7 @@ impl<'a> Parser<'a> {
     ///
     /// # Examples
     ///
-    /// A example of using this is parsing the `@name` directive inside a
+    /// An example of using this is parsing the `@name` directive inside a
     /// module: the exact definition, but it's close enough!
     ///
     /// ```

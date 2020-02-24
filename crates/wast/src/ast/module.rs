@@ -169,8 +169,8 @@ impl<'a> Parse<'a> for Module<'a> {
                     }
 
                     // If we see @custom then bail out since this is a custom
-                    // sectio we'll want to parse later. Additionally if we see
-                    // no annotation also bail out.
+                    // section we'll want to parse later. Additionally if we
+                    // see no annotation also bail out.
                     Some(("custom", _)) | None => return Ok((None, orig)),
 
                     // any other annotation needs to be skipped, so do that

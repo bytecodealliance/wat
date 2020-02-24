@@ -209,8 +209,10 @@ impl<'a> FunctionType<'a> {
                         return Ok(());
                     }
                     let (id, name) = if allow_names {
-                        (p.parse::<Option<_>>()?,
-                    p.annotation("name", |p| p.parse())?)
+                        (
+                            p.parse::<Option<_>>()?,
+                            p.annotation("name", |p| p.parse())?,
+                        )
                     } else {
                         (None, None)
                     };
@@ -250,7 +252,8 @@ impl<'a> Parse<'a> for FunctionType<'a> {
 /// A type declaration in a module
 #[derive(Debug)]
 pub struct Type<'a> {
-    /// An optional name to refer to this `type` by.
+    /// An optional identifer to refer to this `type` by as part of name
+    /// resolution.
     pub id: Option<ast::Id<'a>>,
     /// The type that we're declaring.
     pub func: FunctionType<'a>,
