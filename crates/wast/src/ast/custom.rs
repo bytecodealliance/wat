@@ -30,7 +30,7 @@ pub enum CustomPlace {
     AfterLast,
 }
 
-/// Known sections that custom sections can be placed reslative to.
+/// Known sections that custom sections can be placed relative to.
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[allow(missing_docs)]
 pub enum CustomPlaceAnchor {

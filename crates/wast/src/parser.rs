@@ -930,7 +930,7 @@ impl<'a> Cursor<'a> {
 
     /// Attempts to advance this cursor if the current token is a
     /// [`Token::Reserved`](crate::lexer::Token) and looks like the start of an
-    /// annoation.
+    /// annotation.
     ///
     /// [Annotations][annotation] are a WebAssembly proposal for the text format
     /// which allows placing structured text inside of a text file, for example
