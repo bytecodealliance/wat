@@ -186,14 +186,38 @@ impl Encode for i32 {
     }
 }
 
-impl Encode for Type<'_> {
+impl Encode for FunctionType<'_> {
     fn encode(&self, e: &mut Vec<u8>) {
-        e.push(0x60);
-        self.func.params.len().encode(e);
-        for (_, _, ty) in self.func.params.iter() {
+        self.params.len().encode(e);
+        for (_, _, ty) in self.params.iter() {
             ty.encode(e);
         }
-        self.func.results.encode(e);
+        self.results.encode(e);
+    }
+}
+
+impl Encode for StructType<'_> {
+    fn encode(&self, e: &mut Vec<u8>) {
+        self.fields.len().encode(e);
+        for field in self.fields.iter() {
+            (field.mutable as i32).encode(e);
+            field.ty.encode(e);
+        }
+    }
+}
+
+impl Encode for Type<'_> {
+    fn encode(&self, e: &mut Vec<u8>) {
+        match &self.def {
+            TypeDef::Func(func) => {
+                e.push(0x60);
+                func.encode(e)
+            }
+            TypeDef::Struct(r#struct) => {
+                e.push(0x50);
+                r#struct.encode(e)
+            }
+        }
     }
 }
 
@@ -210,7 +234,7 @@ impl<T: Encode, U: Encode> Encode for (T, U) {
     }
 }
 
-impl Encode for ValType {
+impl<'a> Encode for ValType<'a> {
     fn encode(&self, e: &mut Vec<u8>) {
         match self {
             ValType::I32 => e.push(0x7f),
@@ -221,6 +245,10 @@ impl Encode for ValType {
             ValType::Funcref => e.push(0x70),
             ValType::Anyref => e.push(0x6f),
             ValType::Nullref => e.push(0x6e),
+            ValType::Ref(index) => {
+                e.push(0x6d);
+                index.encode(e);
+            }
         }
     }
 }
@@ -320,7 +348,7 @@ impl Encode for MemoryType {
     }
 }
 
-impl Encode for GlobalType {
+impl<'a> Encode for GlobalType<'a> {
     fn encode(&self, e: &mut Vec<u8>) {
         self.ty.encode(e);
         if self.mutable {
@@ -552,11 +580,11 @@ impl Encode for BlockType<'_> {
         if let Some(Index::Num(n)) = &self.ty.index {
             return i64::from(*n).encode(e);
         }
-        if self.ty.ty.params.is_empty() && self.ty.ty.results.is_empty() {
+        if self.ty.func_ty.params.is_empty() && self.ty.func_ty.results.is_empty() {
             return e.push(0x40);
         }
-        if self.ty.ty.params.is_empty() && self.ty.ty.results.len() == 1 {
-            return self.ty.ty.results[0].encode(e);
+        if self.ty.func_ty.params.is_empty() && self.ty.func_ty.results.len() == 1 {
+            return self.ty.func_ty.results[0].encode(e);
         }
         panic!("multi-value block types should have an index");
     }
@@ -656,7 +684,7 @@ fn find_names<'a>(module: &Module<'a>, fields: &[ModuleField<'a>]) -> Names<'a> 
                 }
                 let mut local_names = Vec::new();
                 let mut local_idx = 0;
-                for (id, name, _) in f.ty.ty.params.iter() {
+                for (id, name, _) in f.ty.func_ty.params.iter() {
                     if let Some(name) = get_name(id, name) {
                         local_names.push((local_idx, name));
                     }
@@ -735,7 +763,7 @@ impl Encode for V8x16Shuffle {
     }
 }
 
-impl Encode for SelectTypes {
+impl<'a> Encode for SelectTypes<'a> {
     fn encode(&self, dst: &mut Vec<u8>) {
         if self.tys.len() == 0 {
             dst.push(0x1b);
@@ -781,5 +809,19 @@ impl Encode for BrOnExn<'_> {
     fn encode(&self, e: &mut Vec<u8>) {
         self.label.encode(e);
         self.exn.encode(e);
+    }
+}
+
+impl Encode for StructAccess<'_> {
+    fn encode(&self, e: &mut Vec<u8>) {
+        self.r#struct.encode(e);
+        self.field.encode(e);
+    }
+}
+
+impl Encode for StructNarrow<'_> {
+    fn encode(&self, e: &mut Vec<u8>) {
+        self.from.encode(e);
+        self.to.encode(e);
     }
 }

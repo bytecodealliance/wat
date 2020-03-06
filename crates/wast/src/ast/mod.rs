@@ -282,6 +282,7 @@ pub mod kw {
     custom_keyword!(f32x4);
     custom_keyword!(f64);
     custom_keyword!(f64x2);
+    custom_keyword!(field);
     custom_keyword!(first);
     custom_keyword!(func);
     custom_keyword!(funcref);
@@ -313,12 +314,14 @@ pub mod kw {
     custom_keyword!(r#loop = "loop");
     custom_keyword!(r#mut = "mut");
     custom_keyword!(r#type = "type");
+    custom_keyword!(r#ref = "ref");
     custom_keyword!(ref_func = "ref.func");
     custom_keyword!(ref_null = "ref.null");
     custom_keyword!(register);
     custom_keyword!(result);
     custom_keyword!(shared);
     custom_keyword!(start);
+    custom_keyword!(r#struct = "struct");
     custom_keyword!(table);
     custom_keyword!(then);
     custom_keyword!(v128);
