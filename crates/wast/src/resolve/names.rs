@@ -72,9 +72,10 @@ impl<'a> Resolver<'a> {
             ModuleField::Elem(e) => register(Ns::Elem, e.id),
             ModuleField::Data(d) => register(Ns::Data, d.id),
             ModuleField::Event(e) => register(Ns::Event, e.id),
-            ModuleField::Start(_) => Ok(()),
-            ModuleField::Export(_) => Ok(()),
-            ModuleField::Custom(_) => Ok(()),
+            ModuleField::Start(_)
+            | ModuleField::Export(_)
+            | ModuleField::GcOptIn(_)
+            | ModuleField::Custom(_) => Ok(()),
         }
     }
 

@@ -22,6 +22,7 @@ pub fn encode(module: &Module<'_>) -> Vec<u8> {
     let mut elem = Vec::new();
     let mut data = Vec::new();
     let mut events = Vec::new();
+    let mut gcs = Vec::new();
     let mut customs = Vec::new();
     for field in fields {
         match field {
@@ -36,6 +37,7 @@ pub fn encode(module: &Module<'_>) -> Vec<u8> {
             ModuleField::Elem(i) => elem.push(i),
             ModuleField::Data(i) => data.push(i),
             ModuleField::Event(i) => events.push(i),
+            ModuleField::GcOptIn(i) => gcs.push(i),
             ModuleField::Custom(i) => customs.push(i),
         }
     }
@@ -49,6 +51,9 @@ pub fn encode(module: &Module<'_>) -> Vec<u8> {
     e.wasm.extend(b"\x01\0\0\0");
 
     e.custom_sections(BeforeFirst);
+    if let Some(gc) = gcs.get(0) {
+        e.section(42, gc);
+    }
     e.section_list(1, Type, &types);
     e.section_list(2, Import, &imports);
     let functys = funcs.iter().map(|f| &f.ty).collect::<Vec<_>>();
@@ -746,6 +751,12 @@ impl Encode for Custom<'_> {
         for list in self.data.iter() {
             e.extend_from_slice(list);
         }
+    }
+}
+
+impl Encode for GcOptIn {
+    fn encode(&self, e: &mut Vec<u8>) {
+        self.version.encode(e);
     }
 }
 
