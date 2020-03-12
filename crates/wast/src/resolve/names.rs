@@ -413,7 +413,7 @@ impl<'a, 'b> ExprResolver<'a, 'b> {
             }
 
             TableFill(i) | TableSet(i) | TableGet(i) | TableSize(i) | TableGrow(i) => {
-                self.resolver.resolve_idx(i, Ns::Table)
+                self.resolver.resolve_idx(&mut i.dst, Ns::Table)
             }
 
             GlobalSet(i) | GlobalGet(i) => self.resolver.resolve_idx(i, Ns::Global),

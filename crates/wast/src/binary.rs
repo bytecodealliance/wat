@@ -618,6 +618,12 @@ impl Encode for TableCopy<'_> {
     }
 }
 
+impl Encode for TableArg<'_> {
+    fn encode(&self, e: &mut Vec<u8>) {
+        self.dst.encode(e);
+    }
+}
+
 impl Encode for MemoryInit<'_> {
     fn encode(&self, e: &mut Vec<u8>) {
         self.data.encode(e);
