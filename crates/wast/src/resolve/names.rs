@@ -111,6 +111,9 @@ impl<'a> Resolver<'a> {
                     ImportKind::Func(t) | ImportKind::Event(EventType::Exception(t)) => {
                         self.resolve_type_use(i.span, t)?;
                     }
+                    ImportKind::Global(t) => {
+                        self.resolve_valtype(&mut t.ty)?;
+                    }
                     _ => {}
                 }
                 Ok(())
