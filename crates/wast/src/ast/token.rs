@@ -6,7 +6,7 @@ use std::str;
 use crate::ast::annotation;
 
 /// A position in the original source stream, used to render errors.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq, Hash)]
 pub struct Span {
     pub(crate) offset: usize,
 }
