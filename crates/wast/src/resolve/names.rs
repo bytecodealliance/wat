@@ -429,6 +429,8 @@ impl<'a, 'b> ExprResolver<'a, 'b> {
                 Ok(())
             }
 
+            FuncBind(i) => self.resolver.resolve_idx(i, Ns::Type),
+
             Block(bt) | If(bt) | Loop(bt) | Try(bt) => {
                 self.labels.push(bt.label);
 
@@ -502,7 +504,7 @@ impl<'a, 'b> ExprResolver<'a, 'b> {
                 ));
             }
 
-            Br(i) | BrIf(i) => self.resolve_label(i),
+            Br(i) | BrIf(i) | BrOnCast(i) => self.resolve_label(i),
 
             BrTable(i) => {
                 for label in i.labels.iter_mut() {
@@ -524,8 +526,10 @@ impl<'a, 'b> ExprResolver<'a, 'b> {
                 Ok(())
             }
 
-            StructNew(s) => self.resolver.resolve_idx(s, Ns::Type),
-            StructSet(s) | StructGet(s) => {
+            StructNew(i) | StructNewSub(i) | StructNewDefault(i) | ArrayNew(i) | ArrayNewSub(i)
+            | ArrayNewDefault(i) | ArrayGet(i) | ArrayGetS(i) | ArrayGetU(i) | ArraySet(i)
+            | ArrayLen(i) | RTTGet(i) | RTTSub(i) => self.resolver.resolve_idx(i, Ns::Type),
+            StructSet(s) | StructGet(s) | StructGetS(s) | StructGetU(s) => {
                 self.resolver.resolve_idx(&mut s.r#struct, Ns::Type)?;
                 self.resolver.resolve_idx(&mut s.field, Ns::Field)
             }
