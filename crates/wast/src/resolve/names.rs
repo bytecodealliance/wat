@@ -208,10 +208,13 @@ impl<'a> Resolver<'a> {
     }
 
     fn resolve_valtype(&self, ty: &mut ValType<'a>) -> Result<(), Error> {
-        if let ValType::Ref(id) = ty {
-            self.ns(Ns::Type)
-                .resolve(id)
-                .map_err(|id| self.resolve_error(id, "type"))?;
+        match ty {
+            ValType::Ref(i) | ValType::Optref(i) | ValType::Rtt(i) => {
+                self.ns(Ns::Type)
+                    .resolve(i)
+                    .map_err(|id| self.resolve_error(id, "type"))?;
+            }
+            _ => {}
         }
         Ok(())
     }

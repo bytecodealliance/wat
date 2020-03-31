@@ -9,12 +9,18 @@ pub enum ValType<'a> {
     I64,
     F32,
     F64,
-    Anyref,
-    Funcref,
     V128,
+    I8,
+    I16,
+    Funcref,
+    Anyref,
     Nullref,
     Exnref,
-    Ref(ast::Index<'a>)
+    Ref(ast::Index<'a>),
+    Optref(ast::Index<'a>),
+    Eqref,
+    I31ref,
+    Rtt(ast::Index<'a>),
 }
 
 impl<'a> Parse<'a> for ValType<'a> {
@@ -32,29 +38,79 @@ impl<'a> Parse<'a> for ValType<'a> {
         } else if l.peek::<kw::f64>() {
             parser.parse::<kw::f64>()?;
             Ok(ValType::F64)
-        } else if l.peek::<kw::anyref>() {
-            parser.parse::<kw::anyref>()?;
-            Ok(ValType::Anyref)
+        } else if l.peek::<kw::v128>() {
+            parser.parse::<kw::v128>()?;
+            Ok(ValType::V128)
+        } else if l.peek::<kw::i8>() {
+            parser.parse::<kw::i8>()?;
+            Ok(ValType::I8)
+        } else if l.peek::<kw::i16>() {
+            parser.parse::<kw::i16>()?;
+            Ok(ValType::I16)
         } else if l.peek::<kw::funcref>() {
             parser.parse::<kw::funcref>()?;
             Ok(ValType::Funcref)
         } else if l.peek::<kw::anyfunc>() {
             parser.parse::<kw::anyfunc>()?;
             Ok(ValType::Funcref)
+        } else if l.peek::<kw::anyref>() {
+            parser.parse::<kw::anyref>()?;
+            Ok(ValType::Anyref)
         } else if l.peek::<kw::nullref>() {
             parser.parse::<kw::nullref>()?;
             Ok(ValType::Nullref)
+        } else if l.peek::<ast::LParen>() {
+            parser.parens(|p| {
+                let mut l = parser.lookahead1();
+                if l.peek::<kw::r#ref>() {
+                    p.parse::<kw::r#ref>()?;
+
+                    let mut l = parser.lookahead1();
+                    if l.peek::<kw::func>() {
+                        parser.parse::<kw::func>()?;
+                        Ok(ValType::Funcref)
+                    } else if l.peek::<kw::any>() {
+                        parser.parse::<kw::any>()?;
+                        Ok(ValType::Anyref)
+                    } else if l.peek::<kw::null>() {
+                        parser.parse::<kw::null>()?;
+                        Ok(ValType::Nullref)
+                    } else if l.peek::<kw::exn>() {
+                        parser.parse::<kw::exn>()?;
+                        Ok(ValType::Exnref)
+                    } else if l.peek::<kw::eq>() {
+                        parser.parse::<kw::eq>()?;
+                        Ok(ValType::Eqref)
+                    } else if l.peek::<kw::i31>() {
+                        parser.parse::<kw::i31>()?;
+                        Ok(ValType::I31ref)
+                    } else if l.peek::<kw::opt>() {
+                        parser.parse::<kw::opt>()?;
+                        Ok(ValType::Optref(parser.parse()?))
+                    } else if l.peek::<ast::Index>() {
+                        Ok(ValType::Ref(parser.parse()?))
+                    } else {
+                        Err(l.error())
+                    }
+                } else if l.peek::<kw::optref>() {
+                    p.parse::<kw::optref>()?;
+                    Ok(ValType::Optref(parser.parse()?))
+                } else if l.peek::<kw::rtt>() {
+                    p.parse::<kw::rtt>()?;
+                    Ok(ValType::Rtt(parser.parse()?))
+                } else {
+                    Err(l.error())
+                }
+            })
         } else if l.peek::<kw::exnref>() {
             parser.parse::<kw::exnref>()?;
             Ok(ValType::Exnref)
-        } else if l.peek::<kw::v128>() {
-            parser.parse::<kw::v128>()?;
-            Ok(ValType::V128)
-        } else if l.peek::<ast::LParen>() {
-            parser.parens(|p| {
-                p.parse::<kw::r#ref>()?;
-                Ok(ValType::Ref(parser.parse()?))
-            })
+        } else if l.peek::<kw::eqref>() {
+            parser.parse::<kw::eqref>()?;
+            Ok(ValType::Eqref)
+        } else if l.peek::<kw::i31ref>() {
+            parser.parse::<kw::i31ref>()?;
+            Ok(ValType::I31ref)
         } else {
             Err(l.error())
         }

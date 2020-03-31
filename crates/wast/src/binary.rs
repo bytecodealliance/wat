@@ -248,14 +248,26 @@ impl<'a> Encode for ValType<'a> {
             ValType::F32 => e.push(0x7d),
             ValType::F64 => e.push(0x7c),
             ValType::V128 => e.push(0x7b),
+            ValType::I8 => e.push(0x7a),
+            ValType::I16 => e.push(0x79),
             ValType::Funcref => e.push(0x70),
             ValType::Anyref => e.push(0x6f),
             ValType::Nullref => e.push(0x6e),
-            ValType::Exnref => e.push(0x68),
             ValType::Ref(index) => {
                 e.push(0x6d);
                 index.encode(e);
             }
+            ValType::Optref(index) => {
+                e.push(0x6c);
+                index.encode(e);
+            }
+            ValType::Eqref => e.push(0x6b),
+            ValType::I31ref => e.push(0x6a),
+            ValType::Rtt(index) => {
+                e.push(0x69);
+                index.encode(e);
+            }
+            ValType::Exnref => e.push(0x68),
         }
     }
 }
