@@ -195,9 +195,16 @@ impl Encode for StructType<'_> {
     fn encode(&self, e: &mut Vec<u8>) {
         self.fields.len().encode(e);
         for field in self.fields.iter() {
-            (field.mutable as i32).encode(e);
             field.ty.encode(e);
+            (field.mutable as i32).encode(e);
         }
+    }
+}
+
+impl Encode for ArrayType<'_> {
+    fn encode(&self, e: &mut Vec<u8>) {
+        self.ty.encode(e);
+        (self.mutable as i32).encode(e);
     }
 }
 
@@ -209,8 +216,12 @@ impl Encode for Type<'_> {
                 func.encode(e)
             }
             TypeDef::Struct(r#struct) => {
-                e.push(0x50);
+                e.push(0x5f);
                 r#struct.encode(e)
+            }
+            TypeDef::Array(array) => {
+                e.push(0x5e);
+                array.encode(e)
             }
         }
     }

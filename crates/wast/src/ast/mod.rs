@@ -321,6 +321,7 @@ pub mod kw {
     custom_keyword!(after);
     custom_keyword!(anyfunc);
     custom_keyword!(anyref);
+    custom_keyword!(array);
     custom_keyword!(assert_exhaustion);
     custom_keyword!(assert_invalid);
     custom_keyword!(assert_malformed);

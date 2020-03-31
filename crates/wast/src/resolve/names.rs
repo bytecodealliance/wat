@@ -83,6 +83,7 @@ impl<'a> Resolver<'a> {
                             }
                         }
                     }
+                    TypeDef::Array(_) => {}
                 }
                 Ok(())
             }
@@ -219,6 +220,7 @@ impl<'a> Resolver<'a> {
         match &mut ty.def {
             TypeDef::Func(func) => self.resolve_function_type(func),
             TypeDef::Struct(r#struct) => self.resolve_struct_type(r#struct),
+            TypeDef::Array(array) => self.resolve_array_type(array),
         }
     }
 
@@ -236,6 +238,11 @@ impl<'a> Resolver<'a> {
         for field in &mut r#struct.fields {
             self.resolve_valtype(&mut field.ty)?;
         }
+        Ok(())
+    }
+
+    fn resolve_array_type(&self, array: &mut ArrayType<'a>) -> Result<(), Error> {
+        self.resolve_valtype(&mut array.ty)?;
         Ok(())
     }
 
