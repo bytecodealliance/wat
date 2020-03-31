@@ -307,7 +307,6 @@ reexport! {
     mod export;
     mod expr;
     mod func;
-    mod gc;
     mod global;
     mod import;
     mod memory;
@@ -354,7 +353,6 @@ pub mod kw {
     custom_keyword!(first);
     custom_keyword!(func);
     custom_keyword!(funcref);
-    custom_keyword!(gc_feature_opt_in);
     custom_keyword!(get);
     custom_keyword!(global);
     custom_keyword!(i16x8);

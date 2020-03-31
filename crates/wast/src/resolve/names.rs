@@ -89,10 +89,7 @@ impl<'a> Resolver<'a> {
             ModuleField::Elem(e) => register(Ns::Elem, e.id),
             ModuleField::Data(d) => register(Ns::Data, d.id),
             ModuleField::Event(e) => register(Ns::Event, e.id),
-            ModuleField::Start(_)
-            | ModuleField::Export(_)
-            | ModuleField::GcOptIn(_)
-            | ModuleField::Custom(_) => Ok(()),
+            ModuleField::Start(_) | ModuleField::Export(_) | ModuleField::Custom(_) => Ok(()),
         }
     }
 
@@ -205,10 +202,7 @@ impl<'a> Resolver<'a> {
 
             ModuleField::Event(e) => self.resolve_event_type(e.span, &mut e.ty),
 
-            ModuleField::Table(_)
-            | ModuleField::Memory(_)
-            | ModuleField::GcOptIn(_)
-            | ModuleField::Custom(_) => Ok(()),
+            ModuleField::Table(_) | ModuleField::Memory(_) | ModuleField::Custom(_) => Ok(()),
         }
     }
 
