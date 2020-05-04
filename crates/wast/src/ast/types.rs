@@ -46,9 +46,14 @@ impl<'a> Parse<'a> for ValType<'a> {
         } else if l.peek::<kw::anyfunc>() {
             parser.parse::<kw::anyfunc>()?;
             Ok(ValType::Ref(RefType::Func))
+        } else if l.peek::<kw::r#externref>() {
+            parser.parse::<kw::r#externref>()?;
+            Ok(ValType::Ref(RefType::Extern))
         } else if l.peek::<kw::anyref>() {
+            // Parse `anyref` as an alias of `externref` until all tests are
+            // ported to use the new name
             parser.parse::<kw::anyref>()?;
-            Ok(ValType::Ref(RefType::Any))
+            Ok(ValType::Ref(RefType::Extern))
         } else if l.peek::<ast::LParen>() {
             parser.parens(|p| {
                 let mut l = parser.lookahead1();
@@ -85,7 +90,7 @@ impl<'a> Parse<'a> for ValType<'a> {
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum RefType<'a> {
     Func,
-    Any,
+    Extern,
     Exn,
     Eq,
     I31,
@@ -97,7 +102,7 @@ impl<'a> From<TableElemType> for RefType<'a> {
     fn from(elem: TableElemType) -> Self {
         match elem {
             TableElemType::Funcref => RefType::Func,
-            TableElemType::Anyref => RefType::Any,
+            TableElemType::Externref => RefType::Extern,
             TableElemType::Exnref => RefType::Exn,
         }
     }
@@ -109,9 +114,12 @@ impl<'a> Parse<'a> for RefType<'a> {
         if l.peek::<kw::func>() {
             parser.parse::<kw::func>()?;
             Ok(RefType::Func)
+        } else if l.peek::<kw::r#extern>() {
+            parser.parse::<kw::r#extern>()?;
+            Ok(RefType::Extern)
         } else if l.peek::<kw::any>() {
             parser.parse::<kw::any>()?;
-            Ok(RefType::Any)
+            Ok(RefType::Extern)
         } else if l.peek::<kw::exn>() {
             parser.parse::<kw::exn>()?;
             Ok(RefType::Exn)
@@ -165,8 +173,8 @@ impl<'a> Parse<'a> for GlobalType<'a> {
 pub enum TableElemType {
     /// An element for a table that is a list of functions.
     Funcref,
-    /// An element for a table that is a list of `anyref` values.
-    Anyref,
+    /// An element for a table that is a list of `externref` values.
+    Externref,
     /// An element for a table that is a list of `exnref` values.
     Exnref,
 }
@@ -183,8 +191,13 @@ impl<'a> Parse<'a> for TableElemType {
             parser.parse::<kw::funcref>()?;
             Ok(TableElemType::Funcref)
         } else if l.peek::<kw::anyref>() {
+            // Parse `anyref` as an alias of `externref` until all tests are
+            // ported to use the new name
             parser.parse::<kw::anyref>()?;
-            Ok(TableElemType::Anyref)
+            Ok(TableElemType::Externref)
+        } else if l.peek::<kw::externref>() {
+            parser.parse::<kw::externref>()?;
+            Ok(TableElemType::Externref)
         } else if l.peek::<kw::exnref>() {
             parser.parse::<kw::exnref>()?;
             Ok(TableElemType::Exnref)
@@ -198,6 +211,7 @@ impl Peek for TableElemType {
     fn peek(cursor: Cursor<'_>) -> bool {
         kw::funcref::peek(cursor)
             || kw::anyref::peek(cursor)
+            || kw::externref::peek(cursor)
             || /* legacy */ kw::anyfunc::peek(cursor)
             || kw::exnref::peek(cursor)
     }

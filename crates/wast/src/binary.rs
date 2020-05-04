@@ -265,7 +265,7 @@ impl<'a> Encode for RefType<'a> {
     fn encode(&self, e: &mut Vec<u8>) {
         match self {
             RefType::Func => e.push(0x70),
-            RefType::Any => e.push(0x6f),
+            RefType::Extern => e.push(0x6f),
             RefType::Eq => e.push(0x6b),
             RefType::I31 => e.push(0x6a),
             RefType::Exn => e.push(0x68),
@@ -339,7 +339,7 @@ impl Encode for TableElemType {
     fn encode(&self, e: &mut Vec<u8>) {
         match self {
             TableElemType::Funcref => RefType::Func.encode(e),
-            TableElemType::Anyref => RefType::Any.encode(e),
+            TableElemType::Externref => RefType::Extern.encode(e),
             TableElemType::Exnref => RefType::Exn.encode(e),
         }
     }
