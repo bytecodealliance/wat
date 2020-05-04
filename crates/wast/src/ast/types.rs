@@ -93,6 +93,16 @@ pub enum RefType<'a> {
     OptType(ast::Index<'a>),
 }
 
+impl<'a> From<TableElemType> for RefType<'a> {
+    fn from(elem: TableElemType) -> Self {
+        match elem {
+            TableElemType::Funcref => RefType::Func,
+            TableElemType::Anyref => RefType::Any,
+            TableElemType::Exnref => RefType::Exn,
+        }
+    }
+}
+
 impl<'a> Parse<'a> for RefType<'a> {
     fn parse(parser: Parser<'a>) -> Result<Self> {
         let mut l = parser.lookahead1();
@@ -151,8 +161,6 @@ impl<'a> Parse<'a> for GlobalType<'a> {
 }
 
 /// List of different kinds of table types we can have.
-///
-/// Currently there's only one, a `funcref`.
 #[derive(Copy, Clone, Debug)]
 pub enum TableElemType {
     /// An element for a table that is a list of functions.

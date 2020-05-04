@@ -525,7 +525,7 @@ impl Encode for ElemPayload<'_> {
     fn encode(&self, e: &mut Vec<u8>) {
         match self {
             ElemPayload::Indices(v) => v.encode(e),
-            ElemPayload::Exprs { exprs, .. } => {
+            ElemPayload::Exprs { exprs, ty } => {
                 exprs.len().encode(e);
                 for idx in exprs {
                     match idx {
@@ -533,7 +533,7 @@ impl Encode for ElemPayload<'_> {
                             Instruction::RefFunc(*idx).encode(e);
                         }
                         None => {
-                            Instruction::RefNull.encode(e);
+                            Instruction::RefNull((*ty).into()).encode(e);
                         }
                     }
                     Instruction::End(None).encode(e);
