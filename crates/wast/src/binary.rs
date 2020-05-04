@@ -250,23 +250,33 @@ impl<'a> Encode for ValType<'a> {
             ValType::V128 => e.push(0x7b),
             ValType::I8 => e.push(0x7a),
             ValType::I16 => e.push(0x79),
-            ValType::Funcref => e.push(0x70),
-            ValType::Anyref => e.push(0x6f),
-            ValType::Ref(index) => {
-                e.push(0x6d);
-                index.encode(e);
+            ValType::Ref(ty) => {
+                ty.encode(e);
             }
-            ValType::Optref(index) => {
-                e.push(0x6c);
-                index.encode(e);
-            }
-            ValType::Eqref => e.push(0x6b),
-            ValType::I31ref => e.push(0x6a),
             ValType::Rtt(index) => {
                 e.push(0x69);
                 index.encode(e);
             }
-            ValType::Exnref => e.push(0x68),
+        }
+    }
+}
+
+impl<'a> Encode for RefType<'a> {
+    fn encode(&self, e: &mut Vec<u8>) {
+        match self {
+            RefType::Func => e.push(0x70),
+            RefType::Any => e.push(0x6f),
+            RefType::Eq => e.push(0x6b),
+            RefType::I31 => e.push(0x6a),
+            RefType::Exn => e.push(0x68),
+            RefType::Type(index) => {
+                e.push(0x6d);
+                index.encode(e);
+            }
+            RefType::OptType(index) => {
+                e.push(0x6c);
+                index.encode(e);
+            }
         }
     }
 }
@@ -328,9 +338,9 @@ impl Encode for TableType {
 impl Encode for TableElemType {
     fn encode(&self, e: &mut Vec<u8>) {
         match self {
-            TableElemType::Funcref => ValType::Funcref.encode(e),
-            TableElemType::Anyref => ValType::Anyref.encode(e),
-            TableElemType::Exnref => ValType::Exnref.encode(e),
+            TableElemType::Funcref => RefType::Func.encode(e),
+            TableElemType::Anyref => RefType::Any.encode(e),
+            TableElemType::Exnref => RefType::Exn.encode(e),
         }
     }
 }
