@@ -14,7 +14,6 @@ pub enum ValType<'a> {
     I16,
     Funcref,
     Anyref,
-    Nullref,
     Exnref,
     Ref(ast::Index<'a>),
     Optref(ast::Index<'a>),
@@ -56,9 +55,6 @@ impl<'a> Parse<'a> for ValType<'a> {
         } else if l.peek::<kw::anyref>() {
             parser.parse::<kw::anyref>()?;
             Ok(ValType::Anyref)
-        } else if l.peek::<kw::nullref>() {
-            parser.parse::<kw::nullref>()?;
-            Ok(ValType::Nullref)
         } else if l.peek::<ast::LParen>() {
             parser.parens(|p| {
                 let mut l = parser.lookahead1();
@@ -72,9 +68,6 @@ impl<'a> Parse<'a> for ValType<'a> {
                     } else if l.peek::<kw::any>() {
                         parser.parse::<kw::any>()?;
                         Ok(ValType::Anyref)
-                    } else if l.peek::<kw::null>() {
-                        parser.parse::<kw::null>()?;
-                        Ok(ValType::Nullref)
                     } else if l.peek::<kw::exn>() {
                         parser.parse::<kw::exn>()?;
                         Ok(ValType::Exnref)
@@ -154,8 +147,6 @@ pub enum TableElemType {
     Funcref,
     /// An element for a table that is a list of `anyref` values.
     Anyref,
-    /// An element for a table that is a list of `nullref` values.
-    Nullref,
     /// An element for a table that is a list of `exnref` values.
     Exnref,
 }
@@ -174,9 +165,6 @@ impl<'a> Parse<'a> for TableElemType {
         } else if l.peek::<kw::anyref>() {
             parser.parse::<kw::anyref>()?;
             Ok(TableElemType::Anyref)
-        } else if l.peek::<kw::nullref>() {
-            parser.parse::<kw::nullref>()?;
-            Ok(TableElemType::Nullref)
         } else if l.peek::<kw::exnref>() {
             parser.parse::<kw::exnref>()?;
             Ok(TableElemType::Exnref)
@@ -190,7 +178,6 @@ impl Peek for TableElemType {
     fn peek(cursor: Cursor<'_>) -> bool {
         kw::funcref::peek(cursor)
             || kw::anyref::peek(cursor)
-            || kw::nullref::peek(cursor)
             || /* legacy */ kw::anyfunc::peek(cursor)
             || kw::exnref::peek(cursor)
     }

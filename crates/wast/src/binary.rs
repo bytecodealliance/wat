@@ -252,7 +252,6 @@ impl<'a> Encode for ValType<'a> {
             ValType::I16 => e.push(0x79),
             ValType::Funcref => e.push(0x70),
             ValType::Anyref => e.push(0x6f),
-            ValType::Nullref => e.push(0x6e),
             ValType::Ref(index) => {
                 e.push(0x6d);
                 index.encode(e);
@@ -331,7 +330,6 @@ impl Encode for TableElemType {
         match self {
             TableElemType::Funcref => ValType::Funcref.encode(e),
             TableElemType::Anyref => ValType::Anyref.encode(e),
-            TableElemType::Nullref => ValType::Nullref.encode(e),
             TableElemType::Exnref => ValType::Exnref.encode(e),
         }
     }
