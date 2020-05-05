@@ -46,8 +46,8 @@ impl<'a> Parse<'a> for ValType<'a> {
         } else if l.peek::<kw::anyfunc>() {
             parser.parse::<kw::anyfunc>()?;
             Ok(ValType::Ref(RefType::Func))
-        } else if l.peek::<kw::r#externref>() {
-            parser.parse::<kw::r#externref>()?;
+        } else if l.peek::<kw::externref>() {
+            parser.parse::<kw::externref>()?;
             Ok(ValType::Ref(RefType::Extern))
         } else if l.peek::<kw::anyref>() {
             // Parse `anyref` as an alias of `externref` until all tests are
@@ -89,12 +89,27 @@ impl<'a> Parse<'a> for ValType<'a> {
 #[allow(missing_docs)]
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub enum RefType<'a> {
+    /// An untyped function reference: funcref. This is part of the reference
+    /// types proposal.
     Func,
+    /// A reference to any host value: externref. This was originally known as
+    /// anyref when it was the supertype of all reference value types. This is
+    /// part of the reference types proposal.
     Extern,
+    /// A reference to an exception: exnref. This is part of the exception
+    /// handling proposal.
     Exn,
+    /// A reference that has an identity that can be compared: eqref. This is
+    /// part of the GC proposal.
     Eq,
+    /// An unboxed 31-bit integer: i31ref. This may be going away if there is no common
+    /// supertype of all reference types. Part of the GC proposal.
     I31,
+    /// A reference to a function, struct, or array: ref T. This is part of the
+    /// GC proposal.
     Type(ast::Index<'a>),
+    /// A nullable reference to a function, struct, or array: optref T. This is
+    /// part of the GC proposal.
     OptType(ast::Index<'a>),
 }
 
@@ -116,9 +131,6 @@ impl<'a> Parse<'a> for RefType<'a> {
             Ok(RefType::Func)
         } else if l.peek::<kw::r#extern>() {
             parser.parse::<kw::r#extern>()?;
-            Ok(RefType::Extern)
-        } else if l.peek::<kw::any>() {
-            parser.parse::<kw::any>()?;
             Ok(RefType::Extern)
         } else if l.peek::<kw::exn>() {
             parser.parse::<kw::exn>()?;
